@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#14532d">
+<title>Multas da Equipa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --grass:#14532d; --grass-d:#0d3b20; --chalk:#f4f6f0; --paper:#fff; --ink:#15221a;
+  --muted:#5b6a60; --line:#dde3d8; --yellow:#f5c400; --red:#b3261e; --ok:#1f7a3f;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Barlow',system-ui,sans-serif;background:var(--chalk);color:var(--ink);font-size:17px;line-height:1.4;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+h1,h2,h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;line-height:1.1;letter-spacing:.2px}
+h2{font-size:26px;margin:4px 0 12px}
+h3{font-size:20px}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+
+.top{background:var(--grass);color:#fff;padding:16px 18px 18px;position:relative;
+  background-image:linear-gradient(90deg,transparent 49.6%,rgba(255,255,255,.14) 49.6%,rgba(255,255,255,.14) 50.4%,transparent 50.4%)}
+.top h1{font-size:30px}
+.top small{opacity:.85;font-size:15px}
+.top .who{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;max-width:640px;margin:0 auto}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 96px}
+.wrap.nonav{padding-bottom:40px}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.fld{display:block;margin-bottom:12px;font-weight:500;font-size:15px;color:var(--muted)}
+.fld input,.fld select,dialog input{display:block;width:100%;margin-top:4px;min-height:46px;padding:10px 12px;border:1.5px solid var(--line);
+  border-radius:10px;background:#fff;color:var(--ink);font-size:17px}
+button{min-height:46px;padding:10px 16px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-weight:600}
+button.primary{background:var(--grass);border-color:var(--grass);color:#fff}
+button.primary:disabled{opacity:.45;cursor:not-allowed}
+button.danger{color:var(--red);border-color:#e7c3c0}
+button.ghost{background:transparent}
+button.small{min-height:38px;padding:6px 12px;font-size:15px}
+.block{width:100%}
+.row{display:flex;gap:10px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.pin{font-family:'Barlow Condensed',sans-serif;font-size:20px;letter-spacing:1px}
+.row.sp{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.empty{color:var(--muted);padding:8px 0}
+
+/* o cartão amarelo: o total a pagar */
+.yellow{background:var(--yellow);border-radius:var(--r);padding:18px 18px 16px;margin-bottom:14px;color:#2a2200;border:1px solid #d9ae00}
+.yellow .lab{font-weight:600;font-size:16px}
+.yellow .big{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:64px;line-height:1;margin:2px 0 4px}
+.yellow.paid{background:#d9efdf;border-color:#a9d6b6;color:#0f3d1f}
+.yellow.zero{background:#fff;border-color:var(--line);color:var(--ink)}
+.notice{background:#fff4c2;border:1px solid #e8cf5b;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-weight:600}
+
+ul.list{list-style:none;padding:0}
+ul.list li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:11px 0;border-top:1px solid var(--line)}
+ul.list li:first-child{border-top:0}
+ul.list .t{min-width:0}
+ul.list small{display:block;color:var(--muted);font-size:14px}
+.amt{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.chk{display:flex;align-items:center;gap:12px;padding:12px 4px;border-top:1px solid var(--line);cursor:pointer}
+.chk:first-child{border-top:0}
+.chk input{width:24px;height:24px;accent-color:var(--grass);flex:none}
+.chk .ct{flex:1}
+
+.rep h3{margin-bottom:2px}
+.rep .lines{color:var(--muted);font-size:15px;margin:4px 0 8px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-weight:600;font-size:14px}
+.pill.ok{background:#d9efdf;color:#0f3d1f}
+.pill.no{background:#fde2df;color:#8a1b14}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;
+  padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs button{flex:1;border:0;border-radius:0;background:transparent;min-height:56px;font-size:13.5px;color:var(--muted);padding:6px 2px}
+nav.tabs button[aria-current="true"]{color:var(--grass);box-shadow:inset 0 3px 0 var(--grass)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;z-index:20;max-width:90%;font-weight:500}
+.toast.err{background:var(--red)}
+
+dialog{border:0;border-radius:var(--r);padding:20px;width:min(92vw,420px);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin-bottom:12px}
+dialog label{display:block;font-size:15px;color:var(--muted);margin-bottom:10px}
+dialog .row{margin-top:14px}
+dialog .row button{flex:1}
+
+table.fines{width:100%;border-collapse:collapse}
+table.fines td{padding:10px 0;border-top:1px solid var(--line);vertical-align:top}
+table.fines tr:first-child td{border-top:0}
+table.fines td:last-child{text-align:right;font-weight:700;white-space:nowrap;padding-left:12px}
+.footlink{text-align:center;margin-top:24px}
+.footlink a{color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:no-preference){.yellow{transition:background .2s}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<dialog id="dlg"></dialog>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* =====================================================
+   CONFIGURAÇÃO — cola aqui os dados do teu projeto Supabase
+   (Project Settings > API)
+   ===================================================== */
+const CFG = {
+  SUPABASE_URL: 'https://smpwhogqkhgztrscdbuj.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtcHdob2dxa2hnenRyc2NkYnVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDQ3MzEsImV4cCI6MjEwNjYyMDczMX0.Og_t5a3mbXEXwxytYOxHwarT5o4ioYybBf6TmX28Q4o'
+};
+
+/* ---------- utilitários ---------- */
+const $app = document.getElementById('app');
+const eur = n => new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(Number(n)||0);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dshort = d => new Date(d).toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit'});
+const randPin = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4,'0');
+const pn = p => p.nickname ? `${p.name} (${p.nickname})` : p.name;
+const sum = a => a.reduce((t,x)=>t+Number(x.amount||0),0);
+
+let toastT;
+function toast(msg, err=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (err?' err':''); t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(()=>t.hidden=true, 3200);
+}
+async function run(fn){
+  try { return await fn(); }
+  catch(e){ console.error(e); toast(e.message || 'Algo correu mal. Tenta de novo.', true); }
+}
+
+/* caixa de diálogo para editar campos */
+function ask(title, fields, ok='Guardar'){
+  return new Promise(resolve=>{
+    const d = document.getElementById('dlg');
+    let done = false;
+    d.innerHTML = `<form><h3>${esc(title)}</h3>
+      ${fields.map(f=>`<label>${esc(f.label)}
+        <input name="${f.name}" type="${f.type||'text'}" ${f.step?`step="${f.step}"`:''} ${f.type==='number'?'min="0" inputmode="decimal"':''}
+         value="${esc(f.value ?? '')}" ${f.optional?'':'required'}></label>`).join('')}
+      <div class="row"><button type="button" class="ghost" id="dc">Cancelar</button><button class="primary">${esc(ok)}</button></div></form>`;
+    const finish = v => { if(done) return; done = true; if(d.open) d.close(); resolve(v); };
+    d.querySelector('form').onsubmit = e => { e.preventDefault(); finish(Object.fromEntries(new FormData(e.target))); };
+    d.querySelector('#dc').onclick = () => finish(null);
+    d.onclose = () => finish(null);
+    d.showModal();
+  });
+}
+
+if (CFG.SUPABASE_URL.startsWith('COLA_AQUI')) {
+  $app.innerHTML = `<div class="wrap nonav"><div class="card"><h2>Falta configurar</h2>
+    <p>Abre o ficheiro <b>index.html</b> e cola o <b>Project URL</b> e a <b>anon public key</b> do Supabase na secção CONFIGURAÇÃO. Os passos estão no LEIA-ME.</p></div></div>`;
+  throw new Error('Supabase não configurado');
+}
+const sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+
+/* ---------- estado ---------- */
+const S = { settings:{team_name:'Multas da Equipa',payment_day:5}, types:[], session:null, isAdmin:false,
+            tab:'assign', assignPlayer:'', checked:new Set() };
+const A = { players:[], fines:[], types:[], closures:[], closed:[] };
+
+async function loadPublic(){
+  const [s,t] = await Promise.all([
+    sb.from('settings').select('*').eq('id',1).maybeSingle(),
+    sb.from('fine_types').select('*').eq('active',true).order('sort_order').order('title')
+  ]);
+  if (s.error) throw s.error; if (t.error) throw t.error;
+  if (s.data) S.settings = s.data;
+  S.types = t.data || [];
+  document.title = S.settings.team_name;
+}
+async function checkAdmin(){
+  S.isAdmin = false;
+  if (!S.session) return;
+  const { data } = await sb.from('admins').select('user_id').eq('user_id', S.session.user.id);
+  S.isAdmin = !!(data && data.length);
+}
+async function loadAdmin(){
+  const [p,f,t,c,cf] = await Promise.all([
+    sb.from('players').select('*').eq('active',true).order('name'),
+    sb.from('fines').select('*').is('closed_period',null).order('created_at',{ascending:false}),
+    sb.from('fine_types').select('*').eq('active',true).order('sort_order').order('title'),
+    sb.from('closures').select('*').order('closed_at',{ascending:false}),
+    sb.from('fines').select('player_id,amount').not('closed_period','is',null)
+  ]);
+  for (const r of [p,f,t,c,cf]) if (r.error) throw r.error;
+  A.players = p.data; A.fines = f.data; A.types = t.data; A.closures = c.data; A.closed = cf.data;
+  S.types = t.data;
+}
+
+/* ---------- componentes ---------- */
+function header(sub){
+  return `<header class="top"><div class="who"><div><h1>${esc(S.settings.team_name)}</h1><small>${sub}</small></div>
+  ${S.isAdmin?`<div class="row" style="flex:none"><button class="small ghost" style="color:#fff;border-color:rgba(255,255,255,.5)" data-act="goto" data-h="${location.hash==='#/capitaes'?'#/':'#/capitaes'}">${location.hash==='#/capitaes'?'O meu perfil':'Capitães'}</button>
+  <button class="small ghost" style="color:#fff;border-color:rgba(255,255,255,.5)" data-act="logout">Sair</button></div>`:''}</div></header>`;
+}
+function fineTable(){
+  if (!S.types.length) return `<p class="empty">A tabela de multas ainda está vazia.</p>`;
+  return `<table class="fines">${S.types.map(t=>`<tr><td>${esc(t.title)}</td><td>${eur(t.amount)}</td></tr>`).join('')}</table>`;
+}
+
+/* =====================================================
+   VISTA DO JOGADOR
+   ===================================================== */
+function pinError(d){
+  if (d.error==='locked') return `Demasiadas tentativas. Tenta de novo daqui a ${d.minutes} min.`;
+  if (d.error==='wrong') return 'PIN incorreto. Se o PIN mudou, pede o novo a um capitão.';
+  return 'Jogador não encontrado.';
+}
+async function renderPlayer(msg=''){
+  let pid = localStorage.getItem('pid'), pin = localStorage.getItem('pin'), v = null;
+  if (pid && pin) {
+    const { data, error } = await sb.rpc('player_view', { p_id: pid, p_pin: pin });
+    if (error) throw error;
+    if (data.error) { localStorage.removeItem('pid'); localStorage.removeItem('pin'); msg = pinError(data); }
+    else v = data;
+  }
+  let body = '';
+  if (!v) {
+    const { data: players, error } = await sb.rpc('list_players');
+    if (error) throw error;
+    body = `<form class="card" id="pinForm"><h2>Quem és tu?</h2>
+      ${msg?`<p class="notice">${esc(msg)}</p>`:''}
+      <label class="fld">O teu nome<select id="pPick" required><option value="">Escolher nome</option>
+        ${players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
+      <label class="fld">PIN de 4 dígitos<input id="pPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="····" required></label>
+      <p class="muted" style="margin-bottom:12px">O PIN foi-te enviado por um capitão. Só precisas de o escrever uma vez neste telemóvel.</p>
+      <button class="primary block">Ver as minhas multas</button></form>`;
+  } else {
+    const now = new Date(), tom = new Date(Date.now()+864e5), pd = S.settings.payment_day;
+    let notice = '';
+    if (now.getDate() === pd) notice = `<div class="notice">Hoje é dia de pagamento.</div>`;
+    else if (tom.getDate() === pd) notice = `<div class="notice">Amanhã é dia de pagamento. Leva o valor certo.</div>`;
+    const total = Number(v.total);
+    const cls = total === 0 ? 'zero' : (v.paid ? 'paid' : '');
+    const lab = total === 0 ? 'Sem multas este mês' : (v.paid ? 'Pago, obrigado' : 'Total a pagar');
+    body = `${notice}
+      <div class="yellow ${cls}"><div class="lab">${esc(v.nickname||v.name)} · ${lab}</div><div class="big">${eur(total)}</div></div>
+      <div class="card"><h2>As minhas multas</h2>
+      ${v.fines.length ? `<ul class="list">${v.fines.map(f=>`<li><div class="t">${esc(f.title)}<small>${dshort(f.created_at)}${f.note?' · '+esc(f.note):''}</small></div><span class="amt">${eur(f.amount)}</span></li>`).join('')}</ul>` : `<p class="empty">Nada por aqui. Bom comportamento.</p>`}
+      </div>
+      <form class="card" id="nickForm"><h3 style="margin-bottom:8px">Como queres ser chamado?</h3>
+        <label class="fld" style="margin-bottom:10px">${v.nickname?'A tua alcunha ou nome preferido':'Escreve uma alcunha ou o nome pelo qual queres ser chamado (opcional)'}
+        <input id="nickInput" maxlength="30" value="${esc(v.nickname||'')}" placeholder="${esc(v.name.split(' ')[0])}"></label>
+        <button class="primary block">Guardar</button></form>
+      <button class="ghost block" data-act="notMe" style="margin-bottom:14px">Sair deste perfil</button>`;
+  }
+  $app.innerHTML = header('Multas do plantel') + `<main class="wrap nonav">${body}
+    <div class="card"><h2>Tabela de multas</h2>${fineTable()}</div>
+    <p class="footlink"><a href="#/capitaes">Área dos capitães</a></p></main>`;
+}
+
+/* =====================================================
+   LOGIN DOS CAPITÃES
+   ===================================================== */
+function renderLogin(msg=''){
+  $app.innerHTML = header('Área dos capitães') + `<main class="wrap nonav"><form class="card" id="loginForm">
+    <h2>Entrar</h2>${msg?`<p class="notice">${esc(msg)}</p>`:''}
+    <label class="fld">Email<input name="email" type="email" autocomplete="username" required></label>
+    <label class="fld">Palavra-passe<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="primary block">Entrar</button></form>
+    <p class="footlink"><a href="#/">Voltar</a></p></main>`;
+  document.getElementById('loginForm').onsubmit = e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    run(async()=>{
+      const { data, error } = await sb.auth.signInWithPassword(f);
+      if (error) throw new Error('Email ou palavra-passe incorretos.');
+      S.session = data.session; await checkAdmin();
+      if (!S.isAdmin) { await sb.auth.signOut(); S.session=null; return renderLogin('Esta conta não é de capitão.'); }
+      route();
+    });
+  };
+}
+
+/* =====================================================
+   ÁREA DOS CAPITÃES
+   ===================================================== */
+const TABS = [['assign','Atribuir'],['report','Relatório'],['players','Jogadores'],['types','Multas'],['season','Época']];
+
+function renderAdmin(){
+  const views = { assign:tabAssign, report:tabReport, players:tabPlayers, types:tabTypes, season:tabSeason };
+  $app.innerHTML = header('Capitão') + `<main class="wrap">${views[S.tab]()}</main>
+    <nav class="tabs">${TABS.map(([k,l])=>`<button data-act="tab" data-tab="${k}" ${S.tab===k?'aria-current="true"':''}>${l}</button>`).join('')}</nav>`;
+  updateAssignBar();
+}
+
+/* ----- Atribuir ----- */
+function tabAssign(){
+  const nameOf = id => { const p = A.players.find(x=>x.id===id); return p ? pn(p) : '—'; };
+  return `<div class="card"><h2>Atribuir multa</h2>
+    <label class="fld">Jogador<select id="aPlayer"><option value="">Escolher jogador</option>
+      ${A.players.map(p=>`<option value="${p.id}" ${p.id===S.assignPlayer?'selected':''}>${esc(pn(p))}</option>`).join('')}</select></label>
+    <div id="aChecks">${A.types.length ? A.types.map(t=>`
+      <label class="chk"><input type="checkbox" value="${t.id}" ${S.checked.has(t.id)?'checked':''}>
+      <span class="ct">${esc(t.title)}</span><b class="amt">${eur(t.amount)}</b></label>`).join('')
+      : `<p class="empty">Ainda não há multas. Adiciona na aba Multas.</p>`}</div>
+    <label class="fld" style="margin-top:12px">Nota (opcional)<input id="aNote" placeholder="Ex.: jogo de sábado"></label>
+    <button class="primary block" id="aBtn" data-act="assign">Atribuir</button></div>
+    <div class="card"><h2>Multas deste mês</h2>
+    ${A.fines.length ? `<ul class="list">${A.fines.slice(0,60).map(f=>`<li><div class="t"><b>${esc(nameOf(f.player_id))}</b> · ${esc(f.title)}
+      <small>${dshort(f.created_at)}${f.note?' · '+esc(f.note):''}</small></div>
+      <div class="row"><span class="amt">${eur(f.amount)}</span>
+      <button class="small" data-act="editFine" data-id="${f.id}" aria-label="Corrigir">Editar</button>
+      <button class="small danger" data-act="delFine" data-id="${f.id}" aria-label="Apagar">Apagar</button></div></li>`).join('')}</ul>`
+      : `<p class="empty">Ainda não há multas este mês.</p>`}</div>`;
+}
+function updateAssignBar(){
+  const b = document.getElementById('aBtn'); if (!b) return;
+  const sel = A.types.filter(t=>S.checked.has(t.id));
+  b.disabled = !S.assignPlayer || !sel.length;
+  b.textContent = sel.length ? `Atribuir ${sel.length} ${sel.length>1?'multas':'multa'} · ${eur(sum(sel))}` : 'Atribuir';
+}
+
+/* ----- Relatório ----- */
+function reportRows(){
+  return A.players.map(p=>{
+    const fs = A.fines.filter(f=>f.player_id===p.id).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    return { p, fs, total: sum(fs) };
+  });
+}
+function tabReport(){
+  const rows = reportRows(), withFines = rows.filter(r=>r.fs.length), without = rows.filter(r=>!r.fs.length);
+  const total = sum(withFines.map(r=>({amount:r.total}))), pending = withFines.filter(r=>!r.p.paid);
+  const paidTotal = sum(withFines.filter(r=>r.p.paid).map(r=>({amount:r.total})));
+  return `<div class="card"><h2>Relatório do mês</h2>
+    <p class="muted">Pagamento no dia ${S.settings.payment_day}</p>
+    <div class="row sp" style="margin:10px 0"><span>Por receber</span><b class="amt">${eur(total-paidTotal)}</b></div>
+    <div class="row sp"><span>Já recebido</span><b class="amt">${eur(paidTotal)}</b></div>
+    <div class="row" style="margin-top:14px"><button class="grow" data-act="copyReport">Copiar para o grupo</button></div></div>
+    ${withFines.map(r=>`<div class="card rep"><div class="row sp"><h3>${esc(pn(r.p))}</h3><b class="amt" style="font-size:20px">${eur(r.total)}</b></div>
+      <p class="lines">${r.fs.map(f=>`${eur(f.amount)} ${esc(f.title)}`).join(' + ')}</p>
+      <div class="row sp"><span class="pill ${r.p.paid?'ok':'no'}">${r.p.paid?'Pago':'Por pagar'}</span>
+      <button class="small ${r.p.paid?'':'primary'}" data-act="togglePaid" data-id="${r.p.id}" data-val="${r.p.paid?'0':'1'}">${r.p.paid?'Marcar por pagar':'Marcar como pago'}</button></div></div>`).join('')
+      || `<div class="card"><p class="empty">Sem multas este mês.</p></div>`}
+    ${without.length?`<p class="muted" style="margin:6px 4px 14px">Sem multas: ${without.map(r=>esc(pn(r.p))).join(', ')}</p>`:''}
+    <button class="primary block" data-act="closeMonth" ${pending.length?'disabled':''}>Fechar mês e começar a zeros</button>
+    ${pending.length?`<p class="muted" style="margin-top:8px">Faltam pagar: ${pending.map(r=>esc(pn(r.p))).join(', ')}.</p>`:''}`;
+}
+function reportText(){
+  const rows = reportRows().filter(r=>r.fs.length);
+  const lines = rows.map(r=>`${pn(r.p)} – ${r.fs.map(f=>`${eur(f.amount)} ${f.title}`).join(' + ')} = ${eur(r.total)}`);
+  return `Multas do mês (pagamento dia ${S.settings.payment_day})\n\n${lines.join('\n')}\n\nTotal: ${eur(sum(rows.map(r=>({amount:r.total}))))}`;
+}
+
+/* ----- Jogadores ----- */
+function tabPlayers(){
+  return `<div class="card"><h2>Jogadores</h2>
+    <form id="addPlayer" class="row" style="margin-bottom:8px"><input class="grow" name="name" placeholder="Nome do novo jogador" required
+      style="min-height:46px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:17px"><button class="primary">Adicionar</button></form>
+    <p class="muted" style="margin-bottom:6px">Cada jogador tem um PIN. Envia-o em privado, nunca no grupo.</p>
+    ${A.players.length?`<ul class="list">${A.players.map(p=>`<li style="flex-direction:column;align-items:stretch">
+      <div class="row sp"><div class="t">${esc(p.name)}${p.nickname?` <small class="muted">“${esc(p.nickname)}”</small>`:''}</div><span class="amt pin">PIN ${esc(p.pin)}</span></div>
+      <div class="row wrap">
+      <button class="small" data-act="copyPin" data-id="${p.id}">Copiar PIN</button>
+      <button class="small" data-act="newPin" data-id="${p.id}">Novo PIN</button>
+      <button class="small" data-act="renamePlayer" data-id="${p.id}">Editar</button>
+      <button class="small danger" data-act="removePlayer" data-id="${p.id}">Remover</button></div></li>`).join('')}</ul>`:`<p class="empty">Adiciona o primeiro jogador acima.</p>`}</div>`;
+}
+
+/* ----- Tabela de multas ----- */
+function tabTypes(){
+  return `<div class="card"><h2>Tabela de multas</h2>
+    <form id="addType" style="margin-bottom:8px"><div class="row">
+      <input class="grow" name="title" placeholder="Nome da multa" required style="min-height:46px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:17px">
+      <input name="amount" type="number" step="0.5" min="0" inputmode="decimal" placeholder="€" required style="width:84px;min-height:46px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:17px"></div>
+      <button class="primary block" style="margin-top:10px">Adicionar multa</button></form>
+    <p class="muted" style="margin-bottom:6px">Mudar o valor aqui não altera multas que já foram atribuídas.</p>
+    ${A.types.length?`<ul class="list">${A.types.map(t=>`<li><div class="t">${esc(t.title)}</div><div class="row"><span class="amt">${eur(t.amount)}</span>
+      <button class="small" data-act="editType" data-id="${t.id}">Editar</button>
+      <button class="small danger" data-act="removeType" data-id="${t.id}">Remover</button></div></li>`).join('')}</ul>`:`<p class="empty">Adiciona a primeira multa acima.</p>`}</div>`;
+}
+
+/* ----- Época ----- */
+function tabSeason(){
+  const closedTotal = sum(A.closed), open = sum(A.fines);
+  const byPlayer = {};
+  A.closed.forEach(x=>byPlayer[x.player_id]=(byPlayer[x.player_id]||0)+Number(x.amount));
+  const rank = A.players.map(p=>({name:pn(p),total:byPlayer[p.id]||0})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
+  return `<div class="yellow zero"><div class="lab">Arrecadado para o jantar de equipa</div><div class="big">${eur(closedTotal)}</div>
+      <div class="muted">Meses fechados. Mês em curso: ${eur(open)}</div></div>
+    <div class="card"><h2>Meses fechados</h2>${A.closures.length?`<ul class="list">${A.closures.map(c=>`<li><span>${esc(c.period)}</span><span class="amt">${eur(c.total)}</span></li>`).join('')}</ul>`:`<p class="empty">Ainda não fechaste nenhum mês.</p>`}</div>
+    <div class="card"><h2>Total por jogador</h2>${rank.length?`<ul class="list">${rank.map(r=>`<li><span>${esc(r.name)}</span><span class="amt">${eur(r.total)}</span></li>`).join('')}</ul>`:`<p class="empty">Sem dados ainda.</p>`}</div>
+    <div class="card"><h2>Definições</h2><form id="settingsForm">
+      <label class="fld">Nome do site<input name="team_name" value="${esc(S.settings.team_name)}" required></label>
+      <label class="fld">Dia de pagamento (1 a 28)<input name="payment_day" type="number" min="1" max="28" inputmode="numeric" value="${S.settings.payment_day}" required></label>
+      <button class="primary block">Guardar definições</button></form></div>`;
+}
+
+/* =====================================================
+   AÇÕES (cliques)
+   ===================================================== */
+async function refreshAdmin(){ await loadAdmin(); renderAdmin(); }
+
+const ACT = {
+  goto: d => { location.hash = d.h; },
+  tab: d => { S.tab = d.tab; renderAdmin(); window.scrollTo(0,0); },
+  logout: () => run(async()=>{ await sb.auth.signOut(); S.session=null; S.isAdmin=false; location.hash='#/'; route(); }),
+
+  notMe: () => { localStorage.removeItem('pid'); localStorage.removeItem('pin'); route(); },
+  copyPin: d => run(async()=>{ const p = A.players.find(x=>x.id===d.id);
+    const t = `Olá ${p.nickname || p.name.split(' ')[0]}, o teu PIN para ver as multas é ${p.pin}.`;
+    try { await navigator.clipboard.writeText(t); toast('Mensagem copiada. Envia-a em privado.'); } catch { prompt('Copia o texto:', t); } }),
+  newPin: d => run(async()=>{ const p = A.players.find(x=>x.id===d.id);
+    if (!confirm(`Gerar um PIN novo para ${p.name}? O antigo deixa de funcionar.`)) return;
+    const { error } = await sb.from('players').update({ pin: randPin(), failed_attempts: 0, locked_until: null }).eq('id', d.id);
+    if (error) throw error; await refreshAdmin(); toast('PIN novo gerado'); }),
+
+  assign: () => run(async()=>{
+    const sel = A.types.filter(t=>S.checked.has(t.id));
+    const note = document.getElementById('aNote').value.trim() || null;
+    const rows = sel.map(t=>({ player_id:S.assignPlayer, title:t.title, amount:t.amount, note }));
+    const { error } = await sb.from('fines').insert(rows);
+    if (error) throw error;
+    const name = pn(A.players.find(p=>p.id===S.assignPlayer));
+    S.checked.clear();
+    await refreshAdmin();
+    toast(`${rows.length>1?'Multas atribuídas':'Multa atribuída'} a ${name}`);
+  }),
+  editFine: d => run(async()=>{
+    const f = A.fines.find(x=>x.id===d.id);
+    const v = await ask('Corrigir multa', [
+      {name:'title',label:'Multa',value:f.title},{name:'amount',label:'Valor (€)',type:'number',step:'0.01',value:f.amount},{name:'note',label:'Nota',value:f.note||''}]);
+    if (!v) return;
+    const { error } = await sb.from('fines').update({ title:v.title, amount:Number(v.amount), note:v.note||null }).eq('id',d.id);
+    if (error) throw error;
+    await refreshAdmin(); toast('Multa corrigida');
+  }),
+  delFine: d => run(async()=>{
+    const f = A.fines.find(x=>x.id===d.id);
+    if (!confirm(`Apagar "${f.title}" (${eur(f.amount)})?`)) return;
+    const { error } = await sb.from('fines').delete().eq('id',d.id);
+    if (error) throw error;
+    await refreshAdmin(); toast('Multa apagada');
+  }),
+
+  togglePaid: d => run(async()=>{
+    const { error } = await sb.from('players').update({ paid: d.val==='1' }).eq('id',d.id);
+    if (error) throw error;
+    await refreshAdmin();
+  }),
+  copyReport: () => run(async()=>{
+    try { await navigator.clipboard.writeText(reportText()); toast('Relatório copiado. Cola no grupo.'); }
+    catch { prompt('Copia o texto:', reportText()); }
+  }),
+  closeMonth: () => run(async()=>{
+    if (!confirm('Fechar o mês? As multas ficam arquivadas e todos voltam a zero.')) return;
+    const period = new Date().toISOString().slice(0,7);
+    const { error } = await sb.rpc('close_month', { p_period: period });
+    if (error) throw error;
+    await refreshAdmin(); toast('Mês fechado. Tudo a zeros.');
+  }),
+
+  renamePlayer: d => run(async()=>{
+    const p = A.players.find(x=>x.id===d.id);
+    const v = await ask('Editar jogador',[{name:'name',label:'Nome',value:p.name},{name:'nickname',label:'Alcunha (opcional)',value:p.nickname||'',optional:true}]); if (!v) return;
+    const { error } = await sb.from('players').update({ name:v.name.trim(), nickname:(v.nickname||'').trim()||null }).eq('id',d.id);
+    if (error) throw error; await refreshAdmin();
+  }),
+  removePlayer: d => run(async()=>{
+    const p = A.players.find(x=>x.id===d.id);
+    const open = A.fines.filter(f=>f.player_id===d.id);
+    const hasHistory = A.closed.some(x=>x.player_id===d.id);
+    let msg = `Remover ${p.name} do plantel?`;
+    if (open.length) msg += `\n\nTem ${open.length} ${open.length>1?'multas':'multa'} este mês (${eur(sum(open))}) que também ${open.length>1?'serão apagadas':'será apagada'}.`;
+    if (!confirm(msg)) return;
+    if (open.length) { const r = await sb.from('fines').delete().eq('player_id', d.id).is('closed_period', null); if (r.error) throw r.error; }
+    // sem histórico de meses fechados: apaga por completo; com histórico: esconde (para não perder o total da época)
+    const { error } = hasHistory ? await sb.from('players').update({ active:false }).eq('id', d.id)
+                                 : await sb.from('players').delete().eq('id', d.id);
+    if (error) throw error;
+    await refreshAdmin(); toast(`${p.name} removido`);
+  }),
+
+  editType: d => run(async()=>{
+    const t = A.types.find(x=>x.id===d.id);
+    const v = await ask('Editar multa',[{name:'title',label:'Nome',value:t.title},{name:'amount',label:'Valor (€)',type:'number',step:'0.01',value:t.amount}]);
+    if (!v) return;
+    const { error } = await sb.from('fine_types').update({ title:v.title.trim(), amount:Number(v.amount) }).eq('id',d.id);
+    if (error) throw error; await refreshAdmin();
+  }),
+  removeType: d => run(async()=>{
+    const t = A.types.find(x=>x.id===d.id);
+    if (!confirm(`Remover "${t.title}" da tabela? As multas já atribuídas mantêm-se.`)) return;
+    const { error } = await sb.from('fine_types').delete().eq('id', d.id);
+    if (error) throw error; S.checked.delete(d.id); await refreshAdmin();
+  })
+};
+
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  ACT[b.dataset.act]?.(b.dataset, b);
+});
+document.addEventListener('change', e=>{
+  if (e.target.id === 'aPlayer') { S.assignPlayer = e.target.value; updateAssignBar(); }
+  else if (e.target.closest('#aChecks')) {
+    e.target.checked ? S.checked.add(e.target.value) : S.checked.delete(e.target.value); updateAssignBar();
+  }
+});
+document.addEventListener('submit', e=>{
+  const id = e.target.id;
+  if (id==='nickForm'){ e.preventDefault();
+    const nick = document.getElementById('nickInput').value.trim();
+    run(async()=>{ const { data, error } = await sb.rpc('set_nickname', { p_id: localStorage.getItem('pid'), p_pin: localStorage.getItem('pin'), p_nick: nick });
+      if (error) throw error; if (data && data.error) throw new Error(pinError(data));
+      toast('Guardado'); await renderPlayer(); }); }
+  if (id==='pinForm'){ e.preventDefault();
+    localStorage.setItem('pid', document.getElementById('pPick').value);
+    localStorage.setItem('pin', document.getElementById('pPin').value.trim());
+    run(()=>renderPlayer()); }
+  if (id==='addPlayer'){ e.preventDefault(); const f=Object.fromEntries(new FormData(e.target));
+    run(async()=>{ const {data,error}=await sb.from('players').insert({name:f.name.trim()}).select().single(); if(error) throw error; await refreshAdmin(); toast(`${data.name} adicionado. PIN: ${data.pin}`); }); }
+  if (id==='addType'){ e.preventDefault(); const f=Object.fromEntries(new FormData(e.target));
+    run(async()=>{ const {error}=await sb.from('fine_types').insert({title:f.title.trim(),amount:Number(f.amount),sort_order:Math.max(0,...A.types.map(t=>t.sort_order||0))+1}); if(error) throw error; await refreshAdmin(); toast('Multa adicionada'); }); }
+  if (id==='settingsForm'){ e.preventDefault(); const f=Object.fromEntries(new FormData(e.target));
+    run(async()=>{ const {error}=await sb.from('settings').update({team_name:f.team_name.trim(),payment_day:Number(f.payment_day)}).eq('id',1); if(error) throw error;
+      await loadPublic(); renderAdmin(); toast('Definições guardadas'); }); }
+});
+
+/* =====================================================
+   ROTAS
+   ===================================================== */
+async function route(){
+  await run(async()=>{
+    await loadPublic();
+    if (location.hash === '#/capitaes') {
+      if (S.session && S.isAdmin) { await loadAdmin(); return renderAdmin(); }
+      return renderLogin();
+    }
+    await renderPlayer();
+  });
+}
+window.addEventListener('hashchange', route);
+(async()=>{
+  const { data:{ session } } = await sb.auth.getSession();
+  S.session = session; await checkAdmin(); route();
+})();
+</script>
+</body>
+</html>
