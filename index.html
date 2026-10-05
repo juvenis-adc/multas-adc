@@ -169,30 +169,22 @@ const S = { settings:{team_name:'Multas da Equipa',payment_day:5}, types:[], ses
 const A = { players:[], fines:[], types:[], closures:[], closed:[] };
 
 async function loadPublic(){
-  const [s,t] = await Promise.all([
-    sb.from('settings').select('*').eq('id',1).maybeSingle(),
-    sb.from('fine_types').select('*').eq('active',true).order('sort_order').order('title')
-  ]);
-  if (s.error) throw s.error; if (t.error) throw t.error;
-  if (s.data) S.settings = s.data;
-  S.types = t.data || [];
+  const r = await sb.from('settings').select('*').eq('id',1).maybeSingle();
+  if (r.error) throw r.error;
+  if (r.data) S.settings = r.data;
   document.title = S.settings.team_name;
 }
-async function checkAdmin(){
-  S.isAdmin = false;
-  if (!S.session) return;
-  const { data } = await sb.from('admins').select('user_id').eq('user_id', S.session.user.id);
-  S.isAdmin = !!(data && data.length);
-}
 async function loadAdmin(){
-  const [p,f,t,c,cf] = await Promise.all([
+  const [p,f,t,c,cf,ta] = await Promise.all([
     sb.from('players').select('*').eq('active',true).order('name'),
     sb.from('fines').select('*').is('closed_period',null).order('created_at',{ascending:false}),
     sb.from('fine_types').select('*').eq('active',true).order('sort_order').order('title'),
     sb.from('closures').select('*').order('closed_at',{ascending:false}),
-    sb.from('fines').select('player_id,amount').not('closed_period','is',null)
+    sb.from('fines').select('player_id,amount').not('closed_period','is',null),
+    sb.from('team_access').select('code').eq('id',1).maybeSingle()
   ]);
-  for (const r of [p,f,t,c,cf]) if (r.error) throw r.error;
+  for (const r of [p,f,t,c,cf,ta]) if (r.error) throw r.error;
+  A.code = ta.data ? ta.data.code : '';
   A.players = p.data; A.fines = f.data; A.types = t.data; A.closures = c.data; A.closed = cf.data;
   S.types = t.data;
 }
@@ -216,22 +208,42 @@ function pinError(d){
   if (d.error==='wrong') return 'PIN incorreto. Se o PIN mudou, pede o novo a um capitão.';
   return 'Jogador não encontrado.';
 }
+function renderCodeGate(msg=''){
+  $app.innerHTML = header('Acesso reservado à equipa') + `<main class="wrap nonav"><form class="card" id="codeForm">
+    <h2>Código de acesso</h2>
+    ${msg?`<p class="notice">${esc(msg)}</p>`:''}
+    <label class="fld">Código da equipa<input id="codeInput" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
+    <p class="muted" style="margin-bottom:12px">O código foi partilhado no grupo da equipa. Só precisas de o escrever uma vez neste telemóvel.</p>
+    <button class="primary block">Entrar</button></form>
+    <p class="footlink"><a href="#/capitaes">Área dos capitães</a></p></main>`;
+}
 async function renderPlayer(msg=''){
+  let code = localStorage.getItem('code');
+  if (!code && S.isAdmin) {   // capitão com sessão iniciada: usa o código automaticamente
+    const r = await sb.from('team_access').select('code').eq('id',1).maybeSingle();
+    if (r.data && r.data.code) { code = r.data.code; localStorage.setItem('code', code); }
+  }
+  if (!code) return renderCodeGate(msg);
+
+  const { data: pub, error: e0 } = await sb.rpc('public_data', { p_code: code });
+  if (e0) throw e0;
+  if (pub.error) { localStorage.removeItem('code'); return renderCodeGate('Código incorreto. Pede o código a um capitão.'); }
+  S.types = pub.types;
+
   let pid = localStorage.getItem('pid'), pin = localStorage.getItem('pin'), v = null;
   if (pid && pin) {
-    const { data, error } = await sb.rpc('player_view', { p_id: pid, p_pin: pin });
+    const { data, error } = await sb.rpc('player_view', { p_id: pid, p_pin: pin, p_code: code });
     if (error) throw error;
+    if (data.error === 'code') { localStorage.removeItem('code'); return renderCodeGate('O código mudou. Pede o novo a um capitão.'); }
     if (data.error) { localStorage.removeItem('pid'); localStorage.removeItem('pin'); msg = pinError(data); }
     else v = data;
   }
   let body = '';
   if (!v) {
-    const { data: players, error } = await sb.rpc('list_players');
-    if (error) throw error;
     body = `<form class="card" id="pinForm"><h2>Quem és tu?</h2>
       ${msg?`<p class="notice">${esc(msg)}</p>`:''}
       <label class="fld">O teu nome<select id="pPick" required><option value="">Escolher nome</option>
-        ${players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
+        ${pub.players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
       <label class="fld">PIN de 4 dígitos<input id="pPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="····" required></label>
       <p class="muted" style="margin-bottom:12px">O PIN foi-te enviado por um capitão. Só precisas de o escrever uma vez neste telemóvel.</p>
       <button class="primary block">Ver as minhas multas</button></form>`;
@@ -393,7 +405,15 @@ function tabSeason(){
     <div class="card"><h2>Definições</h2><form id="settingsForm">
       <label class="fld">Nome do site<input name="team_name" value="${esc(S.settings.team_name)}" required></label>
       <label class="fld">Dia de pagamento (1 a 28)<input name="payment_day" type="number" min="1" max="28" inputmode="numeric" value="${S.settings.payment_day}" required></label>
-      <button class="primary block">Guardar definições</button></form></div>`;
+      <button class="primary block">Guardar definições</button></form></div>
+    <div class="card"><h2>Acesso da equipa</h2>
+      <p class="muted" style="margin-bottom:10px">Sem este código, ninguém vê sequer a lista de nomes. Partilha-o no grupo, junto com o link.</p>
+      <div class="row sp" style="margin-bottom:12px"><span class="muted">Código atual</span><b class="amt pin" style="font-size:22px;word-break:break-all">${esc(A.code||'(sem código)')}</b></div>
+      <div class="row wrap">
+        <button class="small" data-act="copyCode">Copiar mensagem</button>
+        <button class="small" data-act="editCode">Escolher código</button>
+        <button class="small" data-act="newCode">Gerar novo</button></div>
+      <p class="muted" style="margin-top:10px">Se mudares o código, os jogadores têm de o escrever outra vez.</p></div>`;
 }
 
 /* =====================================================
@@ -402,6 +422,27 @@ function tabSeason(){
 async function refreshAdmin(){ await loadAdmin(); renderAdmin(); }
 
 const ACT = {
+  copyCode: () => run(async()=>{
+    const t = `Código de acesso das multas: ${A.code}\nLink: ${location.origin}${location.pathname}`;
+    try { await navigator.clipboard.writeText(t); toast('Mensagem copiada'); } catch { prompt('Copia o texto:', t); }
+  }),
+  editCode: () => run(async()=>{
+    const v = await ask('Código de acesso da equipa', [{ name:'code', label:'Novo código (mínimo 8 caracteres)', value:A.code }]);
+    if (!v) return;
+    const c = v.code.trim();
+    if (c.length < 8) throw new Error('O código tem de ter pelo menos 8 caracteres.');
+    const { error } = await sb.from('team_access').upsert({ id:1, code:c });
+    if (error) throw error;
+    localStorage.setItem('code', c); await refreshAdmin(); toast('Código atualizado');
+  }),
+  newCode: () => run(async()=>{
+    if (!confirm('Gerar um código novo? Os jogadores terão de o escrever outra vez.')) return;
+    const al = 'abcdefghjkmnpqrstuvwxyz23456789', r = crypto.getRandomValues(new Uint32Array(10));
+    const c = Array.from(r, n => al[n % al.length]).join('');
+    const { error } = await sb.from('team_access').upsert({ id:1, code:c });
+    if (error) throw error;
+    localStorage.setItem('code', c); await refreshAdmin(); toast('Código novo gerado');
+  }),
   goto: d => { location.hash = d.h; },
   tab: d => { S.tab = d.tab; renderAdmin(); window.scrollTo(0,0); },
   logout: () => run(async()=>{ await sb.auth.signOut(); S.session=null; S.isAdmin=false; location.hash='#/'; route(); }),
@@ -510,9 +551,13 @@ document.addEventListener('submit', e=>{
   const id = e.target.id;
   if (id==='nickForm'){ e.preventDefault();
     const nick = document.getElementById('nickInput').value.trim();
-    run(async()=>{ const { data, error } = await sb.rpc('set_nickname', { p_id: localStorage.getItem('pid'), p_pin: localStorage.getItem('pin'), p_nick: nick });
-      if (error) throw error; if (data && data.error) throw new Error(pinError(data));
+    run(async()=>{ const { data, error } = await sb.rpc('set_nickname', { p_id: localStorage.getItem('pid'), p_pin: localStorage.getItem('pin'), p_nick: nick, p_code: localStorage.getItem('code') });
+      if (error) throw error; if (data && data.error === 'code') { localStorage.removeItem('code'); return route(); }
+      if (data && data.error) throw new Error(pinError(data));
       toast('Guardado'); await renderPlayer(); }); }
+  if (id==='codeForm'){ e.preventDefault();
+    localStorage.setItem('code', document.getElementById('codeInput').value.trim());
+    run(()=>renderPlayer()); }
   if (id==='pinForm'){ e.preventDefault();
     localStorage.setItem('pid', document.getElementById('pPick').value);
     localStorage.setItem('pin', document.getElementById('pPin').value.trim());
